@@ -1,13 +1,44 @@
 #include <linux/init.h>  
 #include <linux/module.h>  
 #include <linux/kernel.h>
+#include <linux/ip.h>
+#include <net/ip.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 
 
 static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
 
-	printk(KERN_INFO "%s start \n", __FUNCTION__);
+	struct iphdr *iph = NULL;
+	struct tcphdr *tcph = NULL;
+	unsigned int sip = 0;
+	unsigned int dip = 0;
+	unsigned short sport = 0;
+	unsigned short dport = 0;
+
+
+	if (skb == NULL || skb->pkt_type == PACKET_BROADCAST || skb->len < 20){
+		return NF_ACCEPT;
+	}
+
+	iph = ip_hdr(skb);
+
+	if (iph == NULL || iph->version != 4 || !(iph->frag_off & htons(IP_DF)) || iph->protocol != 6){
+		return NF_ACCEPT;
+	}
+
+	sip = iph->saddr;
+	dip = iph->daddr;
+
+	tcph = tcp_hdr(skb);
+	if (tcph == NULL){
+		return NF_ACCEPT;
+	}
+
+	sport = ntohs(tcph->source);
+	dport = ntohs(tcph->dest);
+
+	printk(KERN_INFO "%s: <%pI4:%d to %pI4:%d> \n", __FUNCTION__, &sip, sport, &dip,dport);
 	return NF_ACCEPT;
 
 }
