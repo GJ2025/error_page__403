@@ -7,6 +7,61 @@
 #include <linux/netfilter_ipv4.h>
 
 
+struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 seq, u32 ack_seq, u8 *msg, u32 len){
+
+	struct iphdr *iph;
+	struct tcphdr *tcph;
+	struct sk_buff *skb;
+	int iplen = 0;
+	int tcplen = 0;
+	int ethlen = 0;
+	int headerlen = 0;
+	__wsum tcp_hdr_csum;
+
+	tcplen = len+sizeof(struct tcphdr);
+	iplen = tcplen+sizeof(struct iphdr);
+	ethlen = iplen+ETH_HLEN;
+	headerlen = ethlen - len;
+
+	skb = alloc_skb(ethlen, GFP_ATOMIC);
+
+	skb_reserve(skb, headerlen);
+
+	memcpy(skb_put(skb,len), msg, len);
+	
+	skb_push(skb, sizeof(*tcph));
+	skb_reset_transport_header(skb);
+	tcph = tcp_hdr(skb);
+
+
+	memset(tcph, 0, sizeof(tcph));
+	tcph->doff = 5;
+	tcph->source = sport;
+	tcph->dest = dport;
+	tcph->seq = seq;
+	tcph->ack_seq = ack_seq;
+	tcph->urg_ptr = 0;
+	tcph->psh = 1;
+	tcph->ack = 1;
+	tcph->window = htons(63857);
+	tcph->check = 0;
+
+	tcp_hdr_csum = csum_partial(tcph, tcplen, 0);
+	tcph->check = csum_tcpudp_magic(saddr, daddr, tcplen, IPPROTO_TCP, tcp_hdr_csum);
+	skb->csum = tcp_hdr_csum;
+
+	if (tcph->check == 0){
+		printk("tcph checksum is 0000000000000000\n");
+	} 
+	
+
+	
+
+
+
+	return NULL;
+}
+
 static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
 
 	struct iphdr *iph = NULL;
