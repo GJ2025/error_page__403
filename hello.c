@@ -15,6 +15,7 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 	unsigned int dip = 0;
 	unsigned short sport = 0;
 	unsigned short dport = 0;
+	char *payload = NULL;
 
 
 	if (skb == NULL || skb->pkt_type == PACKET_BROADCAST || skb->len < 20){
@@ -38,7 +39,20 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 	sport = ntohs(tcph->source);
 	dport = ntohs(tcph->dest);
 
+	if (dport != 8008){
+		return NF_ACCEPT;
+	}
+
+	payload = (char *)tcph + tcp_hdrlen(skb);
+
+	if (payload[0] != 'G' || payload[1] != 'E' || payload[2] != 'T'){
+		return NF_ACCEPT;
+	}
+
+
 	printk(KERN_INFO "%s: <%pI4:%d to %pI4:%d> \n", __FUNCTION__, &sip, sport, &dip,dport);
+	printk(KERN_INFO "%.*s\n", ip_transport_len(skb) - tcp_hdrlen(skb), payload);
+
 	return NF_ACCEPT;
 
 }
