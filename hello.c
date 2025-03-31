@@ -105,9 +105,6 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 	u32 ack = 0;
 	struct sk_buff *skb_1 = NULL;
 
-
-
-
 	if (skb == NULL || skb->pkt_type == PACKET_BROADCAST || skb->len < 20){
 		return NF_ACCEPT;
 	}
