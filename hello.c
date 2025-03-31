@@ -6,6 +6,14 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 
+char *msg = "HTTP/1.1 301 Moved Permanently\r\n"
+"Location: http://%s\r\n"
+"Content-Type: text/html; charset=iso-8859-1\r\n"
+"Content-length: 0\r\n"
+"Cache-control: no-cache\r\n"
+"\r\n";
+
+
 
 struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 seq, u32 ack_seq, u8 *msg, u32 len){
 
@@ -27,8 +35,10 @@ struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 se
 
 	skb_reserve(skb, headerlen);
 
+	/*copy http data*/
 	memcpy(skb_put(skb,len), msg, len);
 	
+	/*new tcp header*/
 	skb_push(skb, sizeof(*tcph));
 	skb_reset_transport_header(skb);
 	tcph = tcp_hdr(skb);
@@ -54,12 +64,28 @@ struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 se
 		printk("tcph checksum is 0000000000000000\n");
 	} 
 	
+	skb_push(skb, sizeof(*iph));
+	skb_reset_network_header(skb);
+	iph = ip_hdr(skb);
 
-	
+	iph->version = 4;
+	iph->ihl = 5;
+	iph->tos = 0;
+	iph->tot_len = htons(iplen);
+	iph->id = 0;
+	iph->frag_off = htons(IP_DF);
+	iph->ttl = 64;
+	iph->protocol = IPPROTO_TCP;
+	iph->check = 0;
+	iph->saddr = saddr;
+	iph->daddr = daddr;
+
+	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
+		
 
 
 
-	return NULL;
+	return skb;
 }
 
 static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
@@ -71,6 +97,12 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 	unsigned short sport = 0;
 	unsigned short dport = 0;
 	char *payload = NULL;
+	u32 tcplen = 0;
+	u32 syn = 0;
+	u32 ack = 0;
+	struct sk_buff *skb_1 = NULL;
+
+
 
 
 	if (skb == NULL || skb->pkt_type == PACKET_BROADCAST || skb->len < 20){
@@ -104,9 +136,17 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 		return NF_ACCEPT;
 	}
 
+	tcplen = ip_transport_len(skb) - tcp_hdrlen(skb);
+
+	ack = ntohl(tcph->seq) + tcplen;
+	ack = htonl(ack);
+
+	syn = tcph->ack_seq;
+
+	skb_1 = tcp_newpacket(dip, sip, dport, sport, syn, ack, msg, sizeof(msg)-1); 
 
 	printk(KERN_INFO "%s: <%pI4:%d to %pI4:%d> \n", __FUNCTION__, &sip, sport, &dip,dport);
-	printk(KERN_INFO "%.*s\n", ip_transport_len(skb) - tcp_hdrlen(skb), payload);
+	printk(KERN_INFO "%.*s\n", tcplen, payload);
 
 	return NF_ACCEPT;
 
