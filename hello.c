@@ -6,13 +6,39 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 
-char *msg = "HTTP/1.1 404 Not found\r\n"
-"Content-Type: text/html\r\n"
-"Content-length: 15\r\n"
-"\r\n"
-"PAGE forbiden\n"
-"\n";
 
+char *page_body =
+"<html>\r\n" 
+"<head><title>403 Forbidden</title></head>\r\n"
+"<body>\r\n"
+"<center><h1>403 Forbidden</h1></center>\r\n";
+
+char *msg = NULL;
+
+char *new_403_Page(void)
+{
+	unsigned int size = 0;
+	int page_body_size = 0;
+	char *page_all = NULL;
+
+	size += 256;
+
+	page_body_size = strlen(page_body);
+
+	size += page_body_size;
+
+	page_all = kmalloc(size, GFP_KERNEL);
+	memset(page_all, 0, size);
+
+	snprintf(page_all, size, "HTTP/1.1 403 forbiden\r\n"
+			"Content-Type: text/html\r\n"
+			"Content-length: %d\r\n\r\n"
+			"%s", 
+			page_body_size,
+			page_body);
+
+	return page_all;
+}
 
 
 struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 seq, u32 ack, u8 *msg, u32 len){
@@ -189,7 +215,10 @@ static struct nf_hook_ops net_hooks[] = {
 static int __init hello_init(void) {  
 	int ret = 0;
 	printk(KERN_INFO "Hello, Debian 12 kernel module!\n");  
-    
+
+	msg = new_403_Page(); 
+
+
 	ret = nf_register_net_hooks(&init_net, net_hooks,ARRAY_SIZE(net_hooks));
 
 	return 0;  
@@ -198,6 +227,11 @@ static int __init hello_init(void) {
 static void __exit hello_exit(void) { 
 
 	nf_unregister_net_hooks(&init_net, net_hooks, ARRAY_SIZE(net_hooks));	
+	if (msg){
+		kfree(msg);
+		msg = NULL;
+	}
+	
 	printk(KERN_INFO "Goodbye, kernel module!\n");  
 }  
 
