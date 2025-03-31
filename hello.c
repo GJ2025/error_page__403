@@ -126,7 +126,7 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 	sport = ntohs(tcph->source);
 	dport = ntohs(tcph->dest);
 
-	if (dport != 8008){
+	if (dport != 80){
 		return NF_ACCEPT;
 	}
 
