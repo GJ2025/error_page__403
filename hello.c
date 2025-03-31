@@ -6,16 +6,16 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 
-char *msg = "HTTP/1.1 301 Moved Permanently\r\n"
-"Location: http://%s\r\n"
-"Content-Type: text/html; charset=iso-8859-1\r\n"
-"Content-length: 0\r\n"
-"Cache-control: no-cache\r\n"
-"\r\n";
+char *msg = "HTTP/1.1 404 Not found\r\n"
+"Content-Type: text/html\r\n"
+"Content-length: 15\r\n"
+"\r\n"
+"PAGE forbiden\n"
+"\n";
 
 
 
-struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 seq, u32 ack_seq, u8 *msg, u32 len){
+struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 seq, u32 ack, u8 *msg, u32 len){
 
 	struct iphdr *iph;
 	struct tcphdr *tcph;
@@ -49,7 +49,7 @@ struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 se
 	tcph->source = sport;
 	tcph->dest = dport;
 	tcph->seq = seq;
-	tcph->ack_seq = ack_seq;
+	tcph->ack_seq = ack;
 	tcph->urg_ptr = 0;
 	tcph->psh = 1;
 	tcph->ack = 1;
@@ -64,6 +64,8 @@ struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 se
 		printk("tcph checksum is 0000000000000000\n");
 	} 
 	
+	printk("syn, ack -> %u, %u", ntohl(seq), ntohl(ack));
+
 	skb_push(skb, sizeof(*iph));
 	skb_reset_network_header(skb);
 	iph = ip_hdr(skb);
@@ -92,6 +94,7 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 
 	struct iphdr *iph = NULL;
 	struct tcphdr *tcph = NULL;
+	struct ethhdr *ethh = NULL;
 	unsigned int sip = 0;
 	unsigned int dip = 0;
 	unsigned short sport = 0;
@@ -138,12 +141,37 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 
 	tcplen = ip_transport_len(skb) - tcp_hdrlen(skb);
 
+	printk("tcplen: %u, network order tcph.seq: %u, local host tcp.seq: %u\n", tcplen, tcph->seq, ntohl(tcph->seq));
+
 	ack = ntohl(tcph->seq) + tcplen;
+
+	printk("tcplen: %u, ack: %u\n", tcplen, ack);
+
 	ack = htonl(ack);
 
 	syn = tcph->ack_seq;
 
-	skb_1 = tcp_newpacket(dip, sip, dport, sport, syn, ack, msg, sizeof(msg)-1); 
+	skb_1 = tcp_newpacket(dip, sip, tcph->dest, tcph->source, syn, ack, msg, strlen(msg)); 
+
+	ethh = (struct ethhdr *)skb_push(skb_1, ETH_HLEN);
+	skb_reset_mac_header(skb_1);
+
+	skb_1->protocol = eth_hdr(skb)->h_proto;
+	ethh->h_proto = eth_hdr(skb)->h_proto;
+
+	memcpy(ethh->h_source, eth_hdr(skb)->h_dest, ETH_ALEN);
+	memcpy(ethh->h_dest, eth_hdr(skb)->h_source, ETH_ALEN);
+
+	if (skb->dev){
+		skb_1->dev = skb->dev;
+		dev_queue_xmit(skb_1);
+
+		printk(KERN_INFO "dev_queue_xmit is called\n");
+	}else{
+		printk(KERN_INFO "skb->dev is NULLLLLLLLLLLLLLLLLLLL\n");
+	}
+
+
 
 	printk(KERN_INFO "%s: <%pI4:%d to %pI4:%d> \n", __FUNCTION__, &sip, sport, &dip,dport);
 	printk(KERN_INFO "%.*s\n", tcplen, payload);
