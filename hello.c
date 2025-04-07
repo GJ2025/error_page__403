@@ -5,7 +5,7 @@
 #include <net/ip.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
-
+#include <ring.h>
 
 char *page_body =
 "<html>\r\n" 
@@ -212,13 +212,14 @@ static struct nf_hook_ops net_hooks[] = {
 	}
 };
 
+
 static int __init hello_init(void) {  
 	int ret = 0;
 	printk(KERN_INFO "Hello, Debian 12 kernel module!\n");  
 
 	msg = new_403_Page(); 
 
-
+	ring_init();
 	ret = nf_register_net_hooks(&init_net, net_hooks,ARRAY_SIZE(net_hooks));
 
 	return 0;  
@@ -232,6 +233,7 @@ static void __exit hello_exit(void) {
 		msg = NULL;
 	}
 	
+	ring_exit();
 	printk(KERN_INFO "Goodbye, kernel module!\n");  
 }  
 
