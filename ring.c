@@ -49,14 +49,14 @@ static void init_ring(ring_t * ring){
 
 static int __init anon_mmap_init(void) {
 	g_ring = (ring_t *)kzalloc(ANON_FILE_SIZE, GFP_KERNEL);
-	if (!data) {
+	if (!g_ring) {
 		printk(KERN_ERR "Failed to allocate memory\n");
         	return -ENOMEM;
     	}
 
 	g_anon_file = shmem_file_setup("anon_mmap_file", ANON_FILE_SIZE, 0);
 	if (IS_ERR(g_anon_file)) {
-    		printk(KERN_ERR "Failed to create anonymous file\n");
+    		printk(KERN_ERR "Failed to create anonymous file, %p, %lu\n", g_anon_file, ANON_FILE_SIZE);
     		kfree(data);
     		return PTR_ERR(g_anon_file);
 	}
