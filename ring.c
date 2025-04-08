@@ -6,7 +6,7 @@
 
 
 #define PROC_NAME "simple_int"  
-#define ANON_FILE_SIZE sizeof(ring_t)
+#define ANON_FILE_SIZE (sizeof(ring_t)+4096)
 static void *data = NULL;
 static ring_t *g_ring = NULL;
 struct file *g_anon_file = NULL;
@@ -27,7 +27,15 @@ static int anon_file_mmap(struct file *filp, struct vm_area_struct *vma) {
         page = virt_to_page(filp->private_data + (pfn << PAGE_SHIFT));
         ret = vm_insert_page(vma, vma->vm_start + (pfn - vma->vm_pgoff) * PAGE_SIZE, page);
         if (ret) {
-            return ret;
+#if 0
+		printk("private_data=%px, ANON_FILE_SIZE=%lu, VMA size=%lu\n",
+			filp->private_data, ANON_FILE_SIZE, vma->vm_end - vma->vm_start);
+		printk("addr=%lx, vm_start=%lx, vm_end=%lx, pfn=%lu, vm_pgoff=%lu\n",
+       			vma->vm_start + (pfn - vma->vm_pgoff) * PAGE_SIZE,
+       			vma->vm_start, vma->vm_end, pfn, vma->vm_pgoff);
+		printk(KERN_ERR "ret:%d\n", ret);
+#endif            	
+		return ret;
         }
     }
 
