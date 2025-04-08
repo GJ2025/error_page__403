@@ -77,12 +77,22 @@ static void __exit anon_mmap_exit(void) {
 static int ring_install_fd(struct file *file)
 {       
         int fd;
-        
+       
+	//printk(KERN_INFO "0:file->f_count(%p->%ld)", file, atomic_long_read(&file->f_count));
+
         fd = get_unused_fd_flags(O_RDWR | O_CLOEXEC);
         if (fd < 0)
                 return fd;
+
+	//printk(KERN_INFO "1:file->f_count(%p->%ld)", file, atomic_long_read(&file->f_count));
+
+	get_file(file);
         fd_install(fd, file);
-        return fd;
+	
+	//printk(KERN_INFO "2:file->f_count(%p->%ld)", file, atomic_long_read(&file->f_count));
+	//printk(KERN_INFO "3: fd(%d)\n", fd);
+
+	return fd;
 }
 
 static ssize_t simple_read(struct file *file, char __user *buf,
