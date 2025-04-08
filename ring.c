@@ -7,13 +7,9 @@
 
 #define PROC_NAME "simple_int"  
 #define ANON_FILE_SIZE sizeof(ring_t)
-static int kernel_value = 123;  
 static void *data = NULL;
 static ring_t *g_ring = NULL;
 struct file *g_anon_file = NULL;
-
-
-
 
 static int anon_file_mmap(struct file *filp, struct vm_area_struct *vma) {
     unsigned long pfn;
@@ -38,8 +34,6 @@ static int anon_file_mmap(struct file *filp, struct vm_area_struct *vma) {
     return 0;
 }
 
-
-
 static struct file_operations anon_file_ops = {
     .owner = THIS_MODULE,
     .mmap = anon_file_mmap,
@@ -52,7 +46,6 @@ static void init_ring(ring_t * ring){
 
 	return;
 }
-
 
 static int __init anon_mmap_init(void) {
 	g_ring = (ring_t *)kzalloc(ANON_FILE_SIZE, GFP_KERNEL);
@@ -81,20 +74,35 @@ static void __exit anon_mmap_exit(void) {
     	printk(KERN_INFO "Module unloaded\n");
 }
 
+static int ring_install_fd(struct file *file)
+{       
+        int fd;
+        
+        fd = get_unused_fd_flags(O_RDWR | O_CLOEXEC);
+        if (fd < 0)
+                return fd;
+        fd_install(fd, file);
+        return fd;
+}
 
 static ssize_t simple_read(struct file *file, char __user *buf,
                           size_t count, loff_t *ppos) {
-    int len;
-    
-    if (*ppos > 0) return 0;
+	int len;
+	ring_fd_t ring_fd;
 
-    len = sizeof(kernel_value); 
+	memset(&ring_fd, 0, sizeof(ring_fd));
+
+	if (*ppos > 0) return 0;
+
+	ring_fd.fd =ring_install_fd(g_anon_file);		
+
+	len = sizeof(ring_fd); 
     
-    if (copy_to_user(buf, &kernel_value, len)) 
-        return -EFAULT;
+	if (copy_to_user(buf, &ring_fd, len)) 
+		return -EFAULT;
     
-    *ppos = len;
-    return len;
+	*ppos = len;
+	return len;
 }
 
 static const struct proc_ops proc_ops = {

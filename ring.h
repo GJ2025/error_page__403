@@ -6,9 +6,10 @@ typedef struct ring{
 	long ips[512];
 }ring_t;
 
-
-
-
+typedef struct ring_fd{
+	int fd;
+	int ret;
+}ring_fd_t;
 
 
 void ring_init(void);
