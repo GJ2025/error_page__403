@@ -45,6 +45,14 @@ static struct file_operations anon_file_ops = {
     .mmap = anon_file_mmap,
 };
 
+static void init_ring(ring_t * ring){
+	
+	memset(ring, 0, sizeof(ring_t));
+	ring->mask = 512-1;
+
+	return;
+}
+
 
 static int __init anon_mmap_init(void) {
 	g_ring = (ring_t *)kzalloc(ANON_FILE_SIZE, GFP_KERNEL);
@@ -62,6 +70,8 @@ static int __init anon_mmap_init(void) {
 
 	g_anon_file->f_op = &anon_file_ops;
 	g_anon_file->private_data = (ring_t *)g_ring; 
+
+	init_ring(g_ring);
 
 	printk(KERN_INFO "Anonymous mmap file created successfully\n");
 	return 0;
