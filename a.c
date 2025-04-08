@@ -1,27 +1,29 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include <fcntl.h>   // open() 函数定义
-#include <unistd.h>  // close() 函数定义
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>  
+#include <unistd.h>
+#include <string.h>
+#include "ring.h"
 
 int main() {
-    const char *filename = "/proc/simple_int";  // 示例文件（如 /proc 下的文件）
+    const char *filename = "/proc/simple_int";
     int fd;
-    int abc = 0;
+    ring_fd_t ring_fd;
 
-    // 使用 O_RDONLY 标志打开文件（只读模式）
+    memset(&ring_fd, 0, sizeof(ring_fd));
+
     fd = open(filename, O_RDONLY);
     if (fd == -1) {
-        perror("open failed");  // 输出错误原因（如文件不存在或权限不足）
+        perror("open failed"); 
         return 1;
     }
 
-    // 在此处进行读取操作（使用 read() 函数）...
 
-	read(fd, &abc, sizeof(abc));
+	read(fd, &ring_fd, sizeof(ring_fd));
 
-	printf("abc: %d\n", abc);
+	printf("abc: %d\n", ring_fd.fd);
 
-    close(fd);  // 必须关闭文件描述符
+    close(fd); 
     return 0;
 }
 
