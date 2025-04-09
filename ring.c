@@ -3,7 +3,7 @@
 #include <linux/uaccess.h>
 #include <linux/shmem_fs.h>
 #include <ring.h>
-
+#include <ring_poll.h>
 
 #define PROC_NAME "simple_int"  
 #define ANON_FILE_SIZE (sizeof(ring_t)+4096)
@@ -45,6 +45,7 @@ static int anon_file_mmap(struct file *filp, struct vm_area_struct *vma) {
 static struct file_operations anon_file_ops = {
     .owner = THIS_MODULE,
     .mmap = anon_file_mmap,
+    .poll = anon_file_poll
 };
 
 static void init_ring(ring_t * ring){
@@ -74,12 +75,14 @@ static int __init anon_mmap_init(void) {
 
 	init_ring(g_ring);
 
+	anon_dev_init();
 	printk(KERN_INFO "Anonymous mmap file created successfully\n");
 	return 0;
 }
 
 static void __exit anon_mmap_exit(void) {
     	printk(KERN_INFO "Module unloaded\n");
+	anon_dev_exit();
 }
 
 static int ring_install_fd(struct file *file)
@@ -143,6 +146,9 @@ void ring_push(u32 saddr, u32 daddr){
 	g_ring->ips[g_ring->tail & g_ring->mask].daddr = daddr;
 
 	g_ring->tail++;
+
+	printk("ring_push: head(%ld) tail(%ld)\n", g_ring->head, g_ring->tail);
+	data_consumed_notify();
 	return;
 
 }

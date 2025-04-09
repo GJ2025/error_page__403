@@ -10,6 +10,8 @@
 #define  u32 uint32_t
 #include "ring.h"
 
+#include <sys/epoll.h>
+
 void print_ip(unsigned int ip) {
     unsigned int net_ip = htonl(ip);
 
@@ -21,6 +23,53 @@ void print_ip(unsigned int ip) {
 
     printf("%u.%u.%u.%u\n", bytes[0], bytes[1], bytes[2], bytes[3]);
 }
+
+
+int check_ring(int fd, ring_t *ring) {
+    int epoll_fd;
+    long id = 0;
+    struct epoll_event ev, evs[1];
+
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        perror("epoll_create1");
+        close(fd);
+        return 1;
+    }
+
+    ev.events = EPOLLIN;
+    ev.data.fd = fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+        perror("epoll_ctl");
+        close(fd);
+        close(epoll_fd);
+        return 1;
+    }
+
+    while (1) {
+        int n = epoll_wait(epoll_fd, evs, 1, 3);
+        if (n == -1) {
+            perror("epoll_wait");
+            break;
+        }
+
+        if (n==1 && evs[0].events & EPOLLIN) {
+                printf("%ld: ring.head(%ld), ring.tail(%ld), ring.mask(%0x)\n", id++, ring->head, ring->tail, ring->mask);
+                if (ring->head != ring->tail){
+                        print_ip(ring->ips[ring->head & ring->mask].saddr);
+                        print_ip(ring->ips[ring->head & ring->mask].daddr);
+
+                        ring->head++;
+                }
+	}
+    }
+
+    close(fd);
+    close(epoll_fd);
+    return 0;
+}
+
+
 
 int main() {
     const char *filename = "/proc/simple_int";
@@ -48,13 +97,9 @@ int main() {
 	if (ring == NULL){
 		printf("error:%s\n", strerror(errno));
 	}else{
-		printf("ring.head(%ld), ring.tail(%ld), ring.mask(%0x)\n", ring->head, ring->tail, ring->mask);
-		if (ring->head != ring->tail){
-			print_ip(ring->ips[ring->head & ring->mask].saddr);	
-			print_ip(ring->ips[ring->head & ring->mask].daddr);
-
-			ring->head++;	
-		}
+	
+		check_ring(ring_fd.fd, ring);
+	
 	}
 
 

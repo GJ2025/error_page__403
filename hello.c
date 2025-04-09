@@ -225,7 +225,7 @@ static unsigned get_ips(void *priv, struct sk_buff *skb, const struct nf_hook_st
 
 	if (iph->protocol == IPPROTO_ICMP) {
 		ring_push(sip,dip);
-		printk(KERN_INFO "icmp  ::   <%pI4,%pI4>: <%d,%d>\n",&sip, &dip,  iph->protocol, IPPROTO_ICMP);
+		//printk(KERN_INFO "icmp  ::   <%pI4,%pI4>: <%d,%d>\n",&sip, &dip,  iph->protocol, IPPROTO_ICMP);
 	}
 
 	return NF_ACCEPT;	
