@@ -137,8 +137,22 @@ void ring_exit(void) {
 	remove_proc_entry(PROC_NAME, NULL);  
 }
 
+void ring_push(u32 saddr, u32 daddr){
+
+	g_ring->ips[g_ring->tail & g_ring->mask].saddr = saddr;
+	g_ring->ips[g_ring->tail & g_ring->mask].daddr = daddr;
+
+	g_ring->tail++;
+	return;
+
+}
+
+
+
 EXPORT_SYMBOL(ring_init);
 EXPORT_SYMBOL(ring_exit);
+EXPORT_SYMBOL(ring_push);
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("guojian");

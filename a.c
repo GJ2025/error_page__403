@@ -33,7 +33,7 @@ int main() {
 	if (ring == NULL){
 		printf("error:%s\n", strerror(errno));
 	}else{
-		printf("ring.mask(%0x)\n", ring->mask);
+		printf("ring.head(%ld), ring.tail(%ld), ring.mask(%0x)\n", ring->head, ring->tail, ring->mask);
 	}
 
 

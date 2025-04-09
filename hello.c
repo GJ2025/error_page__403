@@ -116,7 +116,7 @@ struct sk_buff *tcp_newpacket(u32 saddr, u32 daddr, u16 sport, u16 dport, u32 se
 	return skb;
 }
 
-static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){
+static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){             
 
 	struct iphdr *iph = NULL;
 	struct tcphdr *tcph = NULL;
@@ -203,13 +203,49 @@ static unsigned redirect(void *priv, struct sk_buff *skb, const struct nf_hook_s
 
 }
 
+static unsigned get_ips(void *priv, struct sk_buff *skb, const struct nf_hook_state *state){             
+
+	struct iphdr *iph = NULL;
+	unsigned int sip = 0;
+	unsigned int dip = 0;
+
+	if (skb == NULL){
+		return NF_ACCEPT;
+	}
+
+	iph = ip_hdr(skb);
+
+	if (iph == NULL ){
+		return NF_ACCEPT;
+	}
+													
+	sip = iph->saddr;                                                                             
+	dip = iph->daddr;     
+
+
+	if (iph->protocol == IPPROTO_ICMP) {
+		printk(KERN_INFO "icmp  ::   <%pI4,%pI4>: <%d,%d>\n",&sip, &dip,  iph->protocol, IPPROTO_ICMP);
+	}
+
+	return NF_ACCEPT;	
+}
+
 static struct nf_hook_ops net_hooks[] = {
+        {
+		.hook = get_ips,
+		.pf   = NFPROTO_INET,
+		.hooknum = NF_INET_PRE_ROUTING,
+		.priority = NF_IP_PRI_FIRST
+	}
+#if 1	
+	,
 	{
 		.hook = redirect,
 		.pf   = NFPROTO_INET,
 		.hooknum = NF_INET_PRE_ROUTING,
-		.priority = NF_IP_PRI_FIRST,
+		.priority = NF_IP_PRI_FIRST+1
 	}
+#endif
 };
 
 
