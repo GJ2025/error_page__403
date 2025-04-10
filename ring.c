@@ -130,12 +130,12 @@ static const struct proc_ops proc_ops = {
     	.proc_read = simple_read
 };
 
-void ring_init(void) {
+void __init ring_init(void) {
 	anon_mmap_init();
 	proc_create(PROC_NAME, 0444, NULL, &proc_ops); 
 }
 
-void ring_exit(void) {
+void __exit ring_exit(void) {
 	anon_mmap_exit();
 	remove_proc_entry(PROC_NAME, NULL);  
 }
@@ -155,9 +155,9 @@ void ring_push(u32 saddr, u32 daddr){
 
 
 
-EXPORT_SYMBOL(ring_init);
-EXPORT_SYMBOL(ring_exit);
-EXPORT_SYMBOL(ring_push);
+//EXPORT_SYMBOL(ring_init);
+//EXPORT_SYMBOL(ring_exit);
+//EXPORT_SYMBOL(ring_push);
 
 
 MODULE_LICENSE("GPL");
