@@ -259,6 +259,8 @@ static int __init hello_init(void) {
 	ring_init();
 	ret = nf_register_net_hooks(&init_net, net_hooks,ARRAY_SIZE(net_hooks));
 
+	try_module_get(THIS_MODULE);
+
 	return 0;  
 }  
 
@@ -272,6 +274,7 @@ static void __exit hello_exit(void) {
 	
 	ring_exit();
 	printk(KERN_INFO "Goodbye, kernel module!\n");  
+
 }  
 
 module_init(hello_init);  
