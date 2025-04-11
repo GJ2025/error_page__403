@@ -259,8 +259,6 @@ static int __init hello_init(void) {
 	ring_init();
 	ret = nf_register_net_hooks(&init_net, net_hooks,ARRAY_SIZE(net_hooks));
 
-	try_module_get(THIS_MODULE);
-
 	return 0;  
 }  
 

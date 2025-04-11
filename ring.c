@@ -108,7 +108,9 @@ static int ring_install_fd(struct file *file)
 
 	get_file(file);
         fd_install(fd, file);
-	
+
+	try_module_get(THIS_MODULE);
+
 	//printk(KERN_INFO "2:file->f_count(%p->%ld)", file, atomic_long_read(&file->f_count));
 	//printk(KERN_INFO "3: fd(%d)\n", fd);
 
