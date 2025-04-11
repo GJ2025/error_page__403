@@ -21,7 +21,7 @@ void print_ip(unsigned int ip) {
     bytes[2] = (net_ip >> 8)  & 0xFF;  // 第三个字节
     bytes[3] = net_ip & 0xFF;           // 第四个字节
 
-    printf("%u.%u.%u.%u\n", bytes[0], bytes[1], bytes[2], bytes[3]);
+    printf("%u.%u.%u.%u", bytes[0], bytes[1], bytes[2], bytes[3]);
 }
 
 
@@ -54,10 +54,13 @@ int check_ring(int fd, ring_t *ring) {
         }
 
         if (n==1 && evs[0].events & EPOLLIN) {
-                printf("%ld: ring.head(%ld), ring.tail(%ld), ring.mask(%0x)\n", id++, ring->head, ring->tail, ring->mask);
+                printf("%ld: <head:tail --%ld,%ld>, ring.mask(%0x)\n", id++, ring->head, ring->tail, ring->mask);
                 if (ring->head != ring->tail){
+			printf("from:");
                         print_ip(ring->ips[ring->head & ring->mask].saddr);
+			printf("  to:");
                         print_ip(ring->ips[ring->head & ring->mask].daddr);
+			printf("\n");
 
                         ring->head++;
                 }
