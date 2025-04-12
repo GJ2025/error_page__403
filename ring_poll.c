@@ -30,30 +30,23 @@ int __init anon_dev_init(void)
 __poll_t anon_file_poll(struct file *filp, poll_table *wait) {
     ring_t *ring = filp->private_data;
     __poll_t mask = 0;
-#if 0
-	if (ring->tail != ring->head){
-		goto evin;
-	}
-
-#endif
 
 	printk("anon_file_poll called and g_anon_dev(%p)", g_anon_dev);
 
     poll_wait(filp, &g_anon_dev->readq, wait);
 
-//evin:
-
+	smp_rmb();
     if (ring->tail != ring->head)
     	mask |= EPOLLIN | EPOLLRDNORM;  
-
-printk(KERN_INFO "tail(%ld), head(%ld) poll_mask(%d)\n", ring->tail, ring->head, mask);
+printk("%s call with tail(%ld),head(%ld),poll_mask(%d)","YES POLL_WAIT", ring->tail, ring->head, mask);
 
     return mask;
 }
 
 
 void data_consumed_notify(void) {
-    wake_up_interruptible(&g_anon_dev->readq);
+    //wake_up_interruptible(&g_anon_dev->readq);
+    wake_up_interruptible_sync_poll(&g_anon_dev->readq, EPOLLIN);
 }
 
 void __exit anon_dev_exit(void)

@@ -152,11 +152,17 @@ void __exit ring_exit(void) {
 }
 
 void ring_push(u32 saddr, u32 daddr){
+	long tail = 0;
 
-	g_ring->ips[g_ring->tail & g_ring->mask].saddr = saddr;
-	g_ring->ips[g_ring->tail & g_ring->mask].daddr = daddr;
+	smp_rmb();
+	tail = g_ring->tail;
 
+	g_ring->ips[tail & g_ring->mask].saddr = saddr;
+	g_ring->ips[tail & g_ring->mask].daddr = daddr;
+
+	smp_wmb();
 	g_ring->tail++;
+	smp_wmb();
 
 	printk("ring_push: head(%ld) tail(%ld)\n", g_ring->head, g_ring->tail);
 	data_consumed_notify();

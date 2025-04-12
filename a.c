@@ -28,6 +28,7 @@ void print_ip(unsigned int ip) {
 int check_ring(int fd, ring_t *ring) {
     int epoll_fd;
     long id = 0;
+    long epoll_wait_id = 0;
     struct epoll_event ev, evs[1];
 
     epoll_fd = epoll_create1(0);
@@ -37,7 +38,7 @@ int check_ring(int fd, ring_t *ring) {
         return 1;
     }
 
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN|EPOLLET;
     ev.data.fd = fd;
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1) {
         perror("epoll_ctl");
@@ -47,22 +48,28 @@ int check_ring(int fd, ring_t *ring) {
     }
 
     while (1) {
-        int n = epoll_wait(epoll_fd, evs, 1, 3);
+
+        int n = epoll_wait(epoll_fd, evs, 1, 6000);
+
+	epoll_wait_id++;
+
         if (n == -1) {
             perror("epoll_wait");
             break;
         }
 
         if (n==1 && evs[0].events & EPOLLIN) {
-                printf("%ld: <head:tail --%ld,%ld>, ring.mask(%0x)\n", id++, ring->head, ring->tail, ring->mask);
-                if (ring->head != ring->tail){
-			printf("from:");
+                printf("<head:tail --%ld,%ld>, ring.mask(%0x)\n", ring->head, ring->tail, ring->mask);
+		__sync_synchronize();
+		while (ring->head != ring->tail){
+			printf("%ld: from:", id++);
                         print_ip(ring->ips[ring->head & ring->mask].saddr);
 			printf("  to:");
                         print_ip(ring->ips[ring->head & ring->mask].daddr);
 			printf("\n");
 
                         ring->head++;
+			__sync_synchronize();
                 }
 	}
     }
