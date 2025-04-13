@@ -137,19 +137,57 @@ static ssize_t simple_read(struct file *file, char __user *buf,
 	return len;
 }
 
-static char configfile_path[256];  
+
+static int __init read_ips_from(char *filepath) {
+    struct file *fp;
+    char buf[6] = {0};
+    char this_line[64];
+    loff_t pos = 0;
+    ssize_t bytes_read;
+	int i = 0;
+	int j = 0;
+
+    fp = filp_open(filepath, O_RDONLY, 0);
+    if (IS_ERR(fp)) {
+        pr_err("Open error: %ld, file:%s\n", PTR_ERR(fp),filepath);
+        return PTR_ERR(fp);
+    }
+
+    while ((bytes_read = kernel_read(fp, buf, 6, &pos)) > 0) {
+    	for (i = 0; i < bytes_read; i++){
+		this_line[j++] = buf[i];
+		if (buf[i] == '\n'){
+			this_line[j++] = 0;
+			printk(KERN_INFO "%s", this_line);
+			j = 0;	
+		}	
+	}
+
+    }
+
+
+    if (bytes_read < 0)
+        pr_err("Read error: %zd\n", bytes_read);
+
+    filp_close(fp, NULL);
+    return 0;
+}
+
+
 static ssize_t config_write(struct file *file, const char __user *buf, size_t len, loff_t *off) {
-    if (len >= sizeof(configfile_path)) {
-        return -EFAULT;  
-    }
+	static char configfile_path[256];  
+    	
+	if (len >= sizeof(configfile_path)) {
+        	return -EFAULT;  
+    	}
 
-    if (copy_from_user(configfile_path, buf, len)) {
-        return -EFAULT; 
-    }
+    	if (copy_from_user(configfile_path, buf, len)) {
+        	return -EFAULT; 
+    	}
 
-    configfile_path[len] = '\0'; 
-    printk(KERN_INFO "configfile_path: %s\n", configfile_path);
-    return len;  
+    	configfile_path[len-1] = '\0'; 
+	read_ips_from(configfile_path);
+    	return len;  
 }
 
 
