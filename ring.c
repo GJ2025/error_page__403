@@ -137,18 +137,48 @@ static ssize_t simple_read(struct file *file, char __user *buf,
 	return len;
 }
 
+static char configfile_path[256];  
+static ssize_t config_write(struct file *file, const char __user *buf, size_t len, loff_t *off) {
+    if (len >= sizeof(configfile_path)) {
+        return -EFAULT;  
+    }
+
+    if (copy_from_user(configfile_path, buf, len)) {
+        return -EFAULT; 
+    }
+
+    configfile_path[len] = '\0'; 
+    printk(KERN_INFO "configfile_path: %s\n", configfile_path);
+    return len;  
+}
+
+
+
 static const struct proc_ops proc_ops = {
     	.proc_read = simple_read
 };
 
+static const struct proc_ops config_file_proc_ops = {
+	.proc_write = config_write
+};
+
+
+
+
 void __init ring_init(void) {
 	anon_mmap_init();
-	proc_create(PROC_NAME, 0444, NULL, &proc_ops); 
+	proc_create(PROC_NAME, 0444, NULL, &proc_ops);
+	proc_create("config_file", 0444, NULL, &config_file_proc_ops);
+
+	
 }
 
 void __exit ring_exit(void) {
 	anon_mmap_exit();
-	remove_proc_entry(PROC_NAME, NULL);  
+	remove_proc_entry(PROC_NAME, NULL); 
+	remove_proc_entry("config_file", NULL); 
+
+	
 }
 
 void ring_push(u32 saddr, u32 daddr){
